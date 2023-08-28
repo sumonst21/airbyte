@@ -39,10 +39,6 @@ const config = {
             to: "/understanding-airbyte/airbyte-protocol",
           },
           {
-            from: "/integrations/sources/google-analytics-data-api",
-            to: "/integrations/sources/google-analytics-v4",
-          },
-          {
             from: "/integrations/sources/appstore",
             to: "/integrations/sources/appstore-singer",
           },
@@ -65,10 +61,6 @@ const config = {
           {
             from: "/connector-development/config-based/understanding-the-yaml-file/stream-slicers/",
             to: "/connector-development/config-based/understanding-the-yaml-file/partition-router",
-          },
-          {
-            from: "/cloud/managing-airbyte-cloud",
-            to: "/category/using-airbyte-cloud",
           },
           {
             from: "/category/managing-airbyte-cloud",
@@ -124,7 +116,7 @@ const config = {
           customCss: require.resolve("./src/css/custom.css"),
         },
         gtag: {
-          trackingID: "UA-156258629-2",
+          trackingID: "G-HDBMVFQGBH",
           anonymizeIP: true,
         },
       }),
