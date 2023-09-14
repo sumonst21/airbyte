@@ -6,7 +6,6 @@ package io.airbyte.integrations.source.mysql.initialsync;
 
 import static io.airbyte.integrations.debezium.internals.mysql.MysqlCdcStateConstants.MYSQL_CDC_OFFSET;
 import static io.airbyte.integrations.source.mysql.MySqlQueryUtils.getTableSizeInfoForStreams;
-import static io.airbyte.integrations.source.mysql.MySqlQueryUtils.prettyPrintConfiguredAirbyteStreamList;
 import static io.airbyte.integrations.source.mysql.initialsync.MySqlInitialLoadGlobalStateManager.STATE_TYPE_KEY;
 import static io.airbyte.integrations.source.mysql.initialsync.MySqlInitialLoadStateManager.PRIMARY_KEY_STATE_TYPE;
 
@@ -31,7 +30,6 @@ import io.airbyte.integrations.source.mysql.MySqlCdcSavedInfoFetcher;
 import io.airbyte.integrations.source.mysql.MySqlCdcStateHandler;
 import io.airbyte.integrations.source.mysql.MySqlQueryUtils;
 import io.airbyte.integrations.source.mysql.initialsync.MySqlInitialLoadSourceOperations.CdcMetadataInjector;
-import io.airbyte.integrations.source.mysql.internal.models.CursorBasedStatus;
 import io.airbyte.integrations.source.mysql.internal.models.PrimaryKeyLoadStatus;
 import io.airbyte.integrations.source.relationaldb.CdcStateManager;
 import io.airbyte.integrations.source.relationaldb.DbSourceDiscoverUtil;
@@ -179,8 +177,8 @@ public class MySqlInitialReadUtil {
    * that are (i) currently in primary key load (ii) newly added incremental streams.
    */
   public static InitialLoadStreams cdcStreamsForInitialPrimaryKeyLoad(final CdcStateManager stateManager,
-                                                                      final ConfiguredAirbyteCatalog fullCatalog,
-                                                                      final boolean savedOffsetStillPresentOnServer) {
+                                                                   final ConfiguredAirbyteCatalog fullCatalog,
+                                                                   final boolean savedOffsetStillPresentOnServer) {
     if (!savedOffsetStillPresentOnServer) {
       return new InitialLoadStreams(
           fullCatalog.getStreams()
@@ -225,6 +223,36 @@ public class MySqlInitialReadUtil {
     streamsForPkSync.addAll(newlyAddedStreams);
 
     return new InitialLoadStreams(streamsForPkSync, pairToInitialLoadStatus);
+  }
+
+  public static List<ConfiguredAirbyteStream> identifyStreamsToSnapshot(final ConfiguredAirbyteCatalog catalog,
+                                                                         final Set<AirbyteStreamNameNamespacePair> alreadySyncedStreams) {
+    final Set<AirbyteStreamNameNamespacePair> allStreams = AirbyteStreamNameNamespacePair.fromConfiguredCatalog(catalog);
+    final Set<AirbyteStreamNameNamespacePair> newlyAddedStreams = new HashSet<>(Sets.difference(allStreams, alreadySyncedStreams));
+    return catalog.getStreams().stream()
+        .filter(c -> c.getSyncMode() == SyncMode.INCREMENTAL)
+        .filter(stream -> newlyAddedStreams.contains(AirbyteStreamNameNamespacePair.fromAirbyteStream(stream.getStream()))).map(Jsons::clone)
+        .collect(Collectors.toList());
+  }
+
+  // Build a map of stream <-> primary key info (primary key field name + datatype) for all streams
+  // currently undergoing initial primary key syncs.
+  public static Map<io.airbyte.protocol.models.AirbyteStreamNameNamespacePair, PrimaryKeyInfo> initPairToPrimaryKeyInfoMap(
+                                                                                                                            final JdbcDatabase database,
+                                                                                                                            final InitialLoadStreams initialLoadStreams,
+                                                                                                                            final Map<String, TableInfo<CommonField<MysqlType>>> tableNameToTable,
+                                                                                                                            final String quoteString) {
+    final Map<io.airbyte.protocol.models.AirbyteStreamNameNamespacePair, PrimaryKeyInfo> pairToPkInfoMap = new HashMap<>();
+    // For every stream that is in primary initial key sync, we want to maintain information about the
+    // current primary key info associated with the
+    // stream
+    initialLoadStreams.streamsForInitialLoad().forEach(stream -> {
+      final io.airbyte.protocol.models.AirbyteStreamNameNamespacePair pair =
+          new io.airbyte.protocol.models.AirbyteStreamNameNamespacePair(stream.getStream().getName(), stream.getStream().getNamespace());
+      final PrimaryKeyInfo pkInfo = getPrimaryKeyInfo(database, stream, tableNameToTable, quoteString);
+      pairToPkInfoMap.put(pair, pkInfo);
+    });
+    return pairToPkInfoMap;
   }
 
   /**
@@ -284,17 +312,6 @@ public class MySqlInitialReadUtil {
     return stream.getStream().getSourceDefinedPrimaryKey().size() > 0;
   }
 
-  public static List<ConfiguredAirbyteStream> identifyStreamsToSnapshot(final ConfiguredAirbyteCatalog catalog,
-                                                                        final Set<AirbyteStreamNameNamespacePair> alreadySyncedStreams) {
-    final Set<AirbyteStreamNameNamespacePair> allStreams = AirbyteStreamNameNamespacePair.fromConfiguredCatalog(catalog);
-    final Set<AirbyteStreamNameNamespacePair> newlyAddedStreams = new HashSet<>(Sets.difference(allStreams, alreadySyncedStreams));
-    return catalog.getStreams().stream()
-        .filter(c -> c.getSyncMode() == SyncMode.INCREMENTAL)
-        .filter(stream -> newlyAddedStreams.contains(AirbyteStreamNameNamespacePair.fromAirbyteStream(stream.getStream())))
-        .map(Jsons::clone)
-        .collect(Collectors.toList());
-  }
-
   public static List<ConfiguredAirbyteStream> identifyStreamsForCursorBased(final ConfiguredAirbyteCatalog catalog,
                                                                             final List<ConfiguredAirbyteStream> streamsForInitialLoad) {
 
@@ -309,25 +326,7 @@ public class MySqlInitialReadUtil {
         .collect(Collectors.toList());
   }
 
-  // Build a map of stream <-> primary key info (primary key field name + datatype) for all streams
-  // currently undergoing initial primary key syncs.
-  public static Map<io.airbyte.protocol.models.AirbyteStreamNameNamespacePair, PrimaryKeyInfo> initPairToPrimaryKeyInfoMap(
-                                                                                                                           final JdbcDatabase database,
-                                                                                                                           final InitialLoadStreams initialLoadStreams,
-                                                                                                                           final Map<String, TableInfo<CommonField<MysqlType>>> tableNameToTable,
-                                                                                                                           final String quoteString) {
-    final Map<io.airbyte.protocol.models.AirbyteStreamNameNamespacePair, PrimaryKeyInfo> pairToPkInfoMap = new HashMap<>();
-    // For every stream that is in primary initial key sync, we want to maintain information about the
-    // current primary key info associated with the
-    // stream
-    initialLoadStreams.streamsForInitialLoad().forEach(stream -> {
-      final io.airbyte.protocol.models.AirbyteStreamNameNamespacePair pair =
-          new io.airbyte.protocol.models.AirbyteStreamNameNamespacePair(stream.getStream().getName(), stream.getStream().getNamespace());
-      final PrimaryKeyInfo pkInfo = getPrimaryKeyInfo(database, stream, tableNameToTable, quoteString);
-      pairToPkInfoMap.put(pair, pkInfo);
-    });
-    return pairToPkInfoMap;
-  }
+
 
   // Returns the primary key info associated with the stream.
   private static PrimaryKeyInfo getPrimaryKeyInfo(final JdbcDatabase database,
@@ -353,6 +352,10 @@ public class MySqlInitialReadUtil {
     return new PrimaryKeyInfo(pkFieldName, pkFieldType, pkMaxValue);
   }
 
+  public static String prettyPrintConfiguredAirbyteStreamList(final List<ConfiguredAirbyteStream> streamList) {
+    return streamList.stream().map(s -> "%s.%s".formatted(s.getStream().getNamespace(), s.getStream().getName())).collect(Collectors.joining(", "));
+  }
+
   public record InitialLoadStreams(List<ConfiguredAirbyteStream> streamsForInitialLoad,
                                    Map<AirbyteStreamNameNamespacePair, PrimaryKeyLoadStatus> pairToInitialLoadStatus) {
 
@@ -362,6 +365,16 @@ public class MySqlInitialReadUtil {
 
   public static AirbyteStreamNameNamespacePair convertNameNamespacePairFromV0(final io.airbyte.protocol.models.AirbyteStreamNameNamespacePair v1NameNamespacePair) {
     return new AirbyteStreamNameNamespacePair(v1NameNamespacePair.getName(), v1NameNamespacePair.getNamespace());
+  }
+
+
+  public static void logStreamSyncStatus(final List<ConfiguredAirbyteStream> streams, final String syncType) {
+    if (streams.isEmpty()) {
+      LOGGER.info("No Streams will be synced via {}.", syncType);
+    } else {
+      LOGGER.info("Streams to be synced via {} : {}", syncType, streams.size());
+      LOGGER.info("Streams: {}", prettyPrintConfiguredAirbyteStreamList(streams));
+    }
   }
 
 }

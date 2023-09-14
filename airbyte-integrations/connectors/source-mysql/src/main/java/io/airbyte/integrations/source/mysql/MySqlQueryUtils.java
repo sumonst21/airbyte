@@ -146,6 +146,20 @@ public class MySqlQueryUtils {
     return tableSizeInfoMap;
   }
 
+  private static List<JsonNode> getTableEstimate(final JdbcDatabase database, final String namespace, final String name) {
+    try {
+      // Construct the table estimate query.
+      final String tableEstimateQuery =
+          String.format(TABLE_ESTIMATE_QUERY, TABLE_SIZE_BYTES_COL, AVG_ROW_LENGTH, namespace, name);
+      final List<JsonNode> jsonNodes = database.bufferedResultSetQuery(conn -> conn.createStatement().executeQuery(tableEstimateQuery),
+          resultSet -> JdbcUtils.getDefaultSourceOperations().rowToJson(resultSet));
+
+      return jsonNodes.size() > 0 ? jsonNodes : Collections.emptyList();
+    } catch (final Exception e) {
+      LOGGER.warn("Error occurred while attempting to estimate table size", e);
+    }
+    return Collections.emptyList();
+  }
 
   /**
    * Iterates through each stream and find the max cursor value and the record count which has that
@@ -207,30 +221,6 @@ public class MySqlQueryUtils {
     });
 
     return cursorBasedStatusMap;
-  }
-
-  private static List<JsonNode> getTableEstimate(final JdbcDatabase database, final String namespace, final String name)
-      throws SQLException {
-    // Construct the table estimate query.
-    final String tableEstimateQuery =
-        String.format(TABLE_ESTIMATE_QUERY, TABLE_SIZE_BYTES_COL, AVG_ROW_LENGTH, namespace, name);
-    final List<JsonNode> jsonNodes = database.bufferedResultSetQuery(conn -> conn.createStatement().executeQuery(tableEstimateQuery),
-        resultSet -> JdbcUtils.getDefaultSourceOperations().rowToJson(resultSet));
-    Preconditions.checkState(jsonNodes.size() == 1);
-    return jsonNodes;
-  }
-
-  public static void logStreamSyncStatus(final List<ConfiguredAirbyteStream> streams, final String syncType) {
-    if (streams.isEmpty()) {
-      LOGGER.info("No Streams will be synced via {}.", syncType);
-    } else {
-      LOGGER.info("Streams to be synced via {} : {}", syncType, streams.size());
-      LOGGER.info("Streams: {}", prettyPrintConfiguredAirbyteStreamList(streams));
-    }
-  }
-
-  public static String prettyPrintConfiguredAirbyteStreamList(final List<ConfiguredAirbyteStream> streamList) {
-    return streamList.stream().map(s -> "%s.%s".formatted(s.getStream().getNamespace(), s.getStream().getName())).collect(Collectors.joining(", "));
   }
 
 }

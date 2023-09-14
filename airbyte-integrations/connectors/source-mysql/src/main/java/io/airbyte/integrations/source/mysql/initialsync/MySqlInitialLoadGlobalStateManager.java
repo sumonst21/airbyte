@@ -39,7 +39,7 @@ public class MySqlInitialLoadGlobalStateManager implements MySqlInitialLoadState
   // have completed the snapshot.
   private final Set<AirbyteStreamNameNamespacePair> streamsThatHaveCompletedSnapshot;
 
-  public MySqlInitialLoadGlobalStateManager(final InitialLoadStreams initialLoadStreams,
+  MySqlInitialLoadGlobalStateManager(final InitialLoadStreams initialLoadStreams,
                                             final Map<AirbyteStreamNameNamespacePair, PrimaryKeyInfo> pairToPrimaryKeyInfo,
                                             final CdcState cdcState,
                                             final ConfiguredAirbyteCatalog catalog) {
