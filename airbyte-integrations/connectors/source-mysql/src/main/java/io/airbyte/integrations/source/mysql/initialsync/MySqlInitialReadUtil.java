@@ -358,11 +358,6 @@ public class MySqlInitialReadUtil {
 
   }
 
-  public record CursorBasedStreams(List<ConfiguredAirbyteStream> streamsForCursorBased,
-                                   Map<AirbyteStreamNameNamespacePair, CursorBasedStatus> pairToCursorBasedStatus) {
-
-  }
-
   public record PrimaryKeyInfo(String pkFieldName, MysqlType fieldType, String pkMaxValue) {}
 
   public static AirbyteStreamNameNamespacePair convertNameNamespacePairFromV0(final io.airbyte.protocol.models.AirbyteStreamNameNamespacePair v1NameNamespacePair) {
