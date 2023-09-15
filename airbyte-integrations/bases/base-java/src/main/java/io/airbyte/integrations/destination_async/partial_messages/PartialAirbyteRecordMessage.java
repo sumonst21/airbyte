@@ -6,7 +6,6 @@ package io.airbyte.integrations.destination_async.partial_messages;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Objects;
 
 // TODO: (ryankfu) remove this and test with low memory resources to ensure OOM is still not a
@@ -20,7 +19,7 @@ public class PartialAirbyteRecordMessage {
   private String stream;
 
   @JsonProperty("data")
-  private JsonNode data;
+  private String data;
 
   @JsonProperty("emitted_at")
   @JsonPropertyDescription("when the data was emitted from the source. epoch in millisecond.")
@@ -59,16 +58,16 @@ public class PartialAirbyteRecordMessage {
   }
 
   @JsonProperty("data")
-  public JsonNode getData() {
+  public String getData() {
     return data;
   }
 
   @JsonProperty("data")
-  public void setData(final JsonNode data) {
+  public void setData(final String data) {
     this.data = data;
   }
 
-  public PartialAirbyteRecordMessage withData(final JsonNode data) {
+  public PartialAirbyteRecordMessage withData(final String data) {
     this.data = data;
     return this;
   }

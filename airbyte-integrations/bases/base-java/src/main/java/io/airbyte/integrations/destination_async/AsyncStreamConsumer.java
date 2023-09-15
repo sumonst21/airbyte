@@ -140,9 +140,8 @@ public class AsyncStreamConsumer implements SerializedAirbyteMessageConsumer {
 
     final var msgType = partial.getType();
     if (Type.RECORD.equals(msgType) && partial.getRecord().getData() != null) {
-      // store serialized json
-      partial.withSerialized(partial.getRecord().getData().toString());
-      // drop unmarshalled json
+      // move serialized data to `partial` field
+      partial.withSerialized(partial.getRecord().getData());
       partial.getRecord().setData(null);
     } else if (Type.STATE.equals(msgType)) {
       partial.withSerialized(messageString);
