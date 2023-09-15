@@ -254,9 +254,9 @@ QA_CHECKS = [
 
 
 def get_qa_checks(connector: Connector) -> Iterable[bool]:
-    default_qa_checks = QA_CHECKS
     if connector.has_dockerfile:
-        default_qa_checks.append(check_metadata_version_matches_dockerfile_label)
+        QA_CHECKS.append(check_metadata_version_matches_dockerfile_label)
+    return QA_CHECKS
 
 
 def remove_strict_encrypt_suffix(connector_technical_name: str) -> str:
