@@ -8,13 +8,13 @@ from setuptools import find_packages, setup
 MAIN_REQUIREMENTS = [
     "airbyte-cdk~=0.1",
     "appstoreconnect==0.9.0",
-    "pyjwt==1.6.4",
+    "pyjwt==2.13.0",
     "tap-appstore @ https://github.com/airbytehq/tap-appstore/tarball/v0.2.1-airbyte",
 ]
 
 TEST_REQUIREMENTS = [
     "requests-mock~=1.9.3",
-    "pytest~=6.1",
+    "pytest~=8.4",
     "pytest-mock~=3.6.1",
 ]
 

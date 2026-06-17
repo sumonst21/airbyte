@@ -21,10 +21,10 @@ pydash = "^7.0.4"
 google-cloud-storage = "^2.8.0"
 ci-credentials = {path = "../ci_credentials"}
 pandas = "^2.0.3"
-simpleeval = "^0.9.13"
+simpleeval = ">=0.9.13,<1.1.0"
 
 [tool.poetry.group.test.dependencies]
-pytest = "^7.4.0"
+pytest = ">=7.4,<10.0"
 pytest-mock = "^3.10.0"
 freezegun = "^1.1.0"
 

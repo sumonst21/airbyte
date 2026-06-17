@@ -32,7 +32,7 @@ connector-ops = {path = "../connector_ops"}
 pyinstrument = "*"
 
 [tool.poetry.group.test.dependencies]
-pytest = "~6.2.5"
+pytest = "~9.0.3"
 pytest-mock = "~3.10.0"
 freezegun = "*"
 
